@@ -13,10 +13,12 @@
  * limitations under the License.
  */
 
-import { RenderingStates, ScrollMode, SpreadMode } from "./ui_utils.js";
+import { PDFViewerApplication } from "./app.js";
+// eslint-disable-next-line sort-imports
 import { AppOptions } from "./app_options.js";
 import { LinkTarget } from "./pdf_link_service.js";
-import { PDFViewerApplication } from "./app.js";
+// eslint-disable-next-line sort-imports
+import { RenderingStates, ScrollMode, SpreadMode } from "./ui_utils.js";
 
 /* eslint-disable-next-line no-unused-vars */
 const pdfjsVersion =
@@ -123,6 +125,10 @@ function getViewerConfiguration() {
       caseSensitiveCheckbox: document.getElementById("findMatchCase"),
       matchDiacriticsCheckbox: document.getElementById("findMatchDiacritics"),
       entireWordCheckbox: document.getElementById("findEntireWord"),
+
+      // Added checkbox for Regex
+      regexCheckbox: document.getElementById("findRegexCheckbox"),
+
       findMsg: document.getElementById("findMsg"),
       findResultsCount: document.getElementById("findResultsCount"),
       findPreviousButton: document.getElementById("findPrevious"),
