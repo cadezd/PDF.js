@@ -17,9 +17,9 @@
 /** @typedef {import("./event_utils").EventBus} EventBus */
 /** @typedef {import("./interfaces").IPDFLinkService} IPDFLinkService */
 
-import { binarySearchFirstItem, scrollIntoView } from "./ui_utils.js";
-import { getCharacterType, getNormalizeWithNFKC } from "./pdf_find_utils.js";
 import { PromiseCapability } from "pdfjs-lib";
+import { getCharacterType, getNormalizeWithNFKC } from "./pdf_find_utils.js";
+import { binarySearchFirstItem, scrollIntoView } from "./ui_utils.js";
 
 const FindState = {
   FOUND: 0,
@@ -56,23 +56,54 @@ const CHARACTERS_TO_NORMALIZE = {
 const DIACRITICS_EXCEPTION = new Set([
   // UNICODE_COMBINING_CLASS_KANA_VOICING
   // https://www.compart.com/fr/unicode/combining/8
-  0x3099, 0x309a,
-  // UNICODE_COMBINING_CLASS_VIRAMA (under 0xFFFF)
+  0x3099,
+  0x309a, // UNICODE_COMBINING_CLASS_VIRAMA (under 0xFFFF)
   // https://www.compart.com/fr/unicode/combining/9
-  0x094d, 0x09cd, 0x0a4d, 0x0acd, 0x0b4d, 0x0bcd, 0x0c4d, 0x0ccd, 0x0d3b,
-  0x0d3c, 0x0d4d, 0x0dca, 0x0e3a, 0x0eba, 0x0f84, 0x1039, 0x103a, 0x1714,
-  0x1734, 0x17d2, 0x1a60, 0x1b44, 0x1baa, 0x1bab, 0x1bf2, 0x1bf3, 0x2d7f,
-  0xa806, 0xa82c, 0xa8c4, 0xa953, 0xa9c0, 0xaaf6, 0xabed,
-  // 91
+  0x094d,
+  0x09cd,
+  0x0a4d,
+  0x0acd,
+  0x0b4d,
+  0x0bcd,
+  0x0c4d,
+  0x0ccd,
+  0x0d3b,
+  0x0d3c,
+  0x0d4d,
+  0x0dca,
+  0x0e3a,
+  0x0eba,
+  0x0f84,
+  0x1039,
+  0x103a,
+  0x1714,
+  0x1734,
+  0x17d2,
+  0x1a60,
+  0x1b44,
+  0x1baa,
+  0x1bab,
+  0x1bf2,
+  0x1bf3,
+  0x2d7f,
+  0xa806,
+  0xa82c,
+  0xa8c4,
+  0xa953,
+  0xa9c0,
+  0xaaf6,
+  0xabed, // 91
   // https://www.compart.com/fr/unicode/combining/91
-  0x0c56,
-  // 129
+  0x0c56, // 129
   // https://www.compart.com/fr/unicode/combining/129
-  0x0f71,
-  // 130
+  0x0f71, // 130
   // https://www.compart.com/fr/unicode/combining/130
-  0x0f72, 0x0f7a, 0x0f7b, 0x0f7c, 0x0f7d, 0x0f80,
-  // 132
+  0x0f72,
+  0x0f7a,
+  0x0f7b,
+  0x0f7c,
+  0x0f7d,
+  0x0f80, // 132
   // https://www.compart.com/fr/unicode/combining/132
   0x0f74,
 ]);
@@ -403,6 +434,7 @@ class PDFFindController {
     this.onIsPageVisible = null;
 
     this.#reset();
+    // Subscribing to the event bus
     eventBus._on("find", this.#onFind.bind(this));
     eventBus._on("findbarclose", this.#onFindBarClose.bind(this));
   }
@@ -428,6 +460,19 @@ class PDFFindController {
   }
 
   /**
+   * @type {string} The (current) normalized search query.
+   */
+  get #query() {
+    const { query } = this.#state;
+    if (query !== this._rawQuery) {
+      this._rawQuery = query;
+      [this._normalizedQuery] = normalize(query);
+    }
+    console.log(query, this._normalizedQuery);
+    return this._normalizedQuery;
+  }
+
+  /**
    * Set a reference to the PDF document in order to search it.
    * Note that searching is not possible if this method is not called.
    *
@@ -443,6 +488,14 @@ class PDFFindController {
     this._pdfDocument = pdfDocument;
     this._firstPageCapability.resolve();
   }
+
+  /**
+   * @typedef {Object} PDFFindControllerScrollMatchIntoViewParams
+   * @property {HTMLElement} element
+   * @property {number} selectedLeft
+   * @property {number} pageIndex
+   * @property {number} matchIndex
+   */
 
   #onFind(state) {
     if (!state) {
@@ -512,14 +565,6 @@ class PDFFindController {
   }
 
   /**
-   * @typedef {Object} PDFFindControllerScrollMatchIntoViewParams
-   * @property {HTMLElement} element
-   * @property {number} selectedLeft
-   * @property {number} pageIndex
-   * @property {number} matchIndex
-   */
-
-  /**
    * Scroll the current match into view.
    * @param {PDFFindControllerScrollMatchIntoViewParams}
    */
@@ -577,23 +622,6 @@ class PDFFindController {
     this._findTimeout = null;
 
     this._firstPageCapability = new PromiseCapability();
-  }
-
-  /**
-   * @type {string|Array} The (current) normalized search query.
-   */
-  get #query() {
-    const { query } = this.#state;
-    if (typeof query === "string") {
-      if (query !== this._rawQuery) {
-        this._rawQuery = query;
-        [this._normalizedQuery] = normalize(query);
-      }
-      return this._normalizedQuery;
-    }
-    // We don't bother caching the normalized search query in the Array-case,
-    // since this code-path is *essentially* unused in the default viewer.
-    return (query || []).filter(q => !!q).map(q => normalize(q)[0]);
   }
 
   #shouldDirtyMatch(state) {
@@ -702,106 +730,18 @@ class PDFFindController {
     }
   }
 
-  #convertToRegExpString(query, hasDiacritics) {
-    const { matchDiacritics } = this.#state;
-    let isUnicode = false;
-    query = query.replaceAll(
-      SPECIAL_CHARS_REG_EXP,
-      (
-        match,
-        p1 /* to escape */,
-        p2 /* punctuation */,
-        p3 /* whitespaces */,
-        p4 /* diacritics */,
-        p5 /* letters */
-      ) => {
-        // We don't need to use a \s for whitespaces since all the different
-        // kind of whitespaces are replaced by a single " ".
-
-        if (p1) {
-          // Escape characters like *+?... to not interfer with regexp syntax.
-          return `[ ]*\\${p1}[ ]*`;
-        }
-        if (p2) {
-          // Allow whitespaces around punctuation signs.
-          return `[ ]*${p2}[ ]*`;
-        }
-        if (p3) {
-          // Replace spaces by \s+ to be sure to match any spaces.
-          return "[ ]+";
-        }
-        if (matchDiacritics) {
-          return p4 || p5;
-        }
-
-        if (p4) {
-          // Diacritics are removed with few exceptions.
-          return DIACRITICS_EXCEPTION.has(p4.charCodeAt(0)) ? p4 : "";
-        }
-
-        // A letter has been matched and it can be followed by any diacritics
-        // in normalized text.
-        if (hasDiacritics) {
-          isUnicode = true;
-          return `${p5}\\p{M}*`;
-        }
-        return p5;
-      }
-    );
-
-    const trailingSpaces = "[ ]*";
-    if (query.endsWith(trailingSpaces)) {
-      // The [ ]* has been added in order to help to match "foo . bar" but
-      // it doesn't make sense to match some whitespaces after the dot
-      // when it's the last character.
-      query = query.slice(0, query.length - trailingSpaces.length);
-    }
-
-    if (matchDiacritics) {
-      // aX must not match aXY.
-      if (hasDiacritics) {
-        DIACRITICS_EXCEPTION_STR ||= String.fromCharCode(
-          ...DIACRITICS_EXCEPTION
-        );
-
-        isUnicode = true;
-        query = `${query}(?=[${DIACRITICS_EXCEPTION_STR}]|[^\\p{M}]|$)`;
-      }
-    }
-
-    return [isUnicode, query];
-  }
-
   #calculateMatch(pageIndex) {
     let query = this.#query;
     if (query.length === 0) {
       return; // Do nothing: the matches should be wiped out already.
     }
-    const { caseSensitive, entireWord } = this.#state;
+    const { caseSensitive, entireWord, regex } = this.#state;
     const pageContent = this._pageContents[pageIndex];
-    const hasDiacritics = this._hasDiacritics[pageIndex];
 
-    let isUnicode = false;
-    if (typeof query === "string") {
-      [isUnicode, query] = this.#convertToRegExpString(query, hasDiacritics);
-    } else {
-      // Words are sorted in reverse order to be sure that "foobar" is matched
-      // before "foo" in case the query is "foobar foo".
-      query = query
-        .sort()
-        .reverse()
-        .map(q => {
-          const [isUnicodePart, queryPart] = this.#convertToRegExpString(
-            q,
-            hasDiacritics
-          );
-          isUnicode ||= isUnicodePart;
-          return `(${queryPart})`;
-        })
-        .join("|");
-    }
-
-    const flags = `g${isUnicode ? "u" : ""}${caseSensitive ? "" : "i"}`;
+    // Escapes all regex metacharacters if regex is not set
+    query = regex ? query : query.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Flags for global, unicode, and case-sensitive (if selected) matching
+    const flags = `gu${caseSensitive ? "" : "i"}`;
     query = query ? new RegExp(query, flags) : null;
 
     this.#calculateRegExpMatch(query, entireWord, pageIndex, pageContent);
