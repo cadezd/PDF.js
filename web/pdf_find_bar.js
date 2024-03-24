@@ -37,6 +37,10 @@ class PDFFindBar {
     this.caseSensitive = options.caseSensitiveCheckbox;
     this.matchDiacritics = options.matchDiacriticsCheckbox;
     this.entireWord = options.entireWordCheckbox;
+
+    // Added regex option
+    this.regex = options.regexCheckbox;
+
     this.findMsg = options.findMsg;
     this.findResultsCount = options.findResultsCount;
     this.findPreviousButton = options.findPreviousButton;
@@ -85,6 +89,11 @@ class PDFFindBar {
       this.dispatchEvent("entirewordchange");
     });
 
+    // Added event for regex
+    this.regex.addEventListener("click", () => {
+      this.dispatchEvent("regexchange");
+    });
+
     this.matchDiacritics.addEventListener("click", () => {
       this.dispatchEvent("diacriticmatchingchange");
     });
@@ -104,6 +113,8 @@ class PDFFindBar {
       highlightAll: this.highlightAll.checked,
       findPrevious: findPrev,
       matchDiacritics: this.matchDiacritics.checked,
+      // Added regex option
+      regex: this.regex.checked,
     });
   }
 
