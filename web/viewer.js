@@ -29,7 +29,12 @@ const pdfjsBuild =
 
 const AppConstants =
   typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-    ? { LinkTarget, RenderingStates, ScrollMode, SpreadMode }
+    ? {
+        LinkTarget,
+        RenderingStates,
+        ScrollMode,
+        SpreadMode,
+      }
     : null;
 
 window.PDFViewerApplication = PDFViewerApplication;
@@ -103,18 +108,15 @@ function getViewerConfiguration() {
       outerContainer: document.getElementById("outerContainer"),
       sidebarContainer: document.getElementById("sidebarContainer"),
       toggleButton: document.getElementById("sidebarToggle"),
-      resizer: document.getElementById("sidebarResizer"),
-      // Buttons
+      resizer: document.getElementById("sidebarResizer"), // Buttons
       thumbnailButton: document.getElementById("viewThumbnail"),
       outlineButton: document.getElementById("viewOutline"),
       attachmentsButton: document.getElementById("viewAttachments"),
-      layersButton: document.getElementById("viewLayers"),
-      // Views
+      layersButton: document.getElementById("viewLayers"), // Views
       thumbnailView: document.getElementById("thumbnailView"),
       outlineView: document.getElementById("outlineView"),
       attachmentsView: document.getElementById("attachmentsView"),
-      layersView: document.getElementById("layersView"),
-      // View-specific options
+      layersView: document.getElementById("layersView"), // View-specific options
       currentOutlineItemButton: document.getElementById("currentOutlineItem"),
     },
     findBar: {
