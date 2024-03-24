@@ -75,6 +75,7 @@ function waitOnEventOrTimeout({ target, name, delay = 0 }) {
  * and `off` methods. To raise an event, the `dispatch` method shall be used.
  */
 class EventBus {
+  // LOG where all events are stored: 2d array [eventName][listener]
   #listeners = Object.create(null);
 
   /**
@@ -82,6 +83,7 @@ class EventBus {
    * @param {function} listener
    * @param {Object} [options]
    */
+  // Adds an [eventName][listener] to the LOG
   on(eventName, listener, options = null) {
     this._on(eventName, listener, {
       external: true,
@@ -94,6 +96,7 @@ class EventBus {
    * @param {function} listener
    * @param {Object} [options]
    */
+  // Deletes an [eventName][listener] from the LOG
   off(eventName, listener, options = null) {
     this._off(eventName, listener, {
       external: true,
@@ -105,6 +108,7 @@ class EventBus {
    * @param {string} eventName
    * @param {Object} data
    */
+  // Handles the event by calling the listener (first internal, then external)
   dispatch(eventName, data) {
     const eventListeners = this.#listeners[eventName];
     if (!eventListeners || eventListeners.length === 0) {
@@ -136,6 +140,7 @@ class EventBus {
   /**
    * @ignore
    */
+  // Adds an [eventName][listener] to the LOG (IMPLEMENTATION)
   _on(eventName, listener, options = null) {
     const eventListeners = (this.#listeners[eventName] ||= []);
     eventListeners.push({
@@ -148,6 +153,7 @@ class EventBus {
   /**
    * @ignore
    */
+  // Deletes an [eventName][listener] from the LOG (IMPLEMENTATION)
   _off(eventName, listener, options = null) {
     const eventListeners = this.#listeners[eventName];
     if (!eventListeners) {
