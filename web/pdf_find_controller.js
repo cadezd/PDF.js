@@ -28,7 +28,7 @@ const FindState = {
   PENDING: 3,
 };
 
-const FIND_TIMEOUT = 250; // ms
+const FIND_TIMEOUT = 300; // ms
 const MATCH_SCROLL_OFFSET_TOP = -50; // px
 const MATCH_SCROLL_OFFSET_LEFT = -400; // px
 
@@ -112,6 +112,7 @@ let DIACRITICS_EXCEPTION_STR; // Lazily initialized, see below.
 const DIACRITICS_REG_EXP = /\p{M}+/gu;
 const SPECIAL_CHARS_REG_EXP =
   /([.*+?^${}()|[\]\\])|(\p{P})|(\s+)|(\p{M})|(\p{L})/gu;
+const REG_EXP_METACHARS = /[.*+?^${}()|[\]\\]/g;
 const NOT_DIACRITIC_FROM_END_REG_EXP = /([^\p{M}])\p{M}*$/u;
 const NOT_DIACRITIC_FROM_START_REG_EXP = /^\p{M}*([^\p{M}])/u;
 
@@ -460,16 +461,20 @@ class PDFFindController {
   }
 
   /**
-   * @type {string} The (current) normalized search query.
+   * @type {string|Array} The (current) normalized search query.
    */
   get #query() {
     const { query } = this.#state;
-    if (query !== this._rawQuery) {
-      this._rawQuery = query;
-      [this._normalizedQuery] = normalize(query);
+    if (typeof query === "string") {
+      if (query !== this._rawQuery) {
+        this._rawQuery = query;
+        [this._normalizedQuery] = normalize(query);
+      }
+      return this._normalizedQuery;
     }
-    console.log(query, this._normalizedQuery);
-    return this._normalizedQuery;
+    // We don't bother caching the normalized search query in the Array-case,
+    // since this code-path is *essentially* unused in the default viewer.
+    return (query || []).filter(q => !!q).map(q => normalize(q)[0]);
   }
 
   /**
@@ -710,6 +715,11 @@ class PDFFindController {
     const diffs = this._pageDiffs[pageIndex];
     let match;
     while ((match = query.exec(pageContent)) !== null) {
+      // Prevent infinite loop when the regex matches the empty string
+      if (match.index === query.lastIndex) {
+        query.lastIndex++;
+      }
+
       if (
         entireWord &&
         !this.#isEntireWord(pageContent, match.index, match[0].length)
@@ -738,12 +748,18 @@ class PDFFindController {
     const { caseSensitive, entireWord, regex } = this.#state;
     const pageContent = this._pageContents[pageIndex];
 
-    // Escapes all regex metacharacters if regex is not set
-    query = regex ? query : query.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    // Flags for global, unicode, and case-sensitive (if selected) matching
-    const flags = `gu${caseSensitive ? "" : "i"}`;
-    query = query ? new RegExp(query, flags) : null;
+    if (Array.isArray(query)) {
+      // Words are sorted in reverse order to be sure that "foobar" is matched
+      // before "foo" in case the query is "foobar foo".
+      query = query.sort().reverse().join("|");
+    }
 
+    // Flags for global, unicode, and case-sensitive matching
+    const flags = `gu${caseSensitive ? "" : "i"}`;
+    // Escape all regex metacharacters if regex is not set
+    query = regex ? query : query.replaceAll(REG_EXP_METACHARS, "\\$&");
+
+    query = query ? new RegExp(query, flags) : null;
     this.#calculateRegExpMatch(query, entireWord, pageIndex, pageContent);
 
     // When `highlightAll` is set, ensure that the matches on previously
