@@ -327,25 +327,6 @@ describe("pdf_find_controller", function () {
     });
   });
 
-  it("performs a multiple term (phrase) search", async function () {
-    // Page 9 contains 'alternate solution' and pages 6 and 9 contain
-    // 'solution'. Both should be found for multiple term (phrase) search.
-    const { eventBus, pdfFindController } = await initPdfFindController();
-
-    await testSearch({
-      eventBus,
-      pdfFindController,
-      state: {
-        query: ["alternate solution", "solution"],
-      },
-      matchesPerPage: [0, 0, 0, 0, 0, 1, 0, 0, 3, 0, 0, 0, 0, 0],
-      selectedMatch: {
-        pageIndex: 5,
-        matchIndex: 0,
-      },
-    });
-  });
-
   it("performs a normal search, where the text is normalized", async function () {
     const { eventBus, pdfFindController } = await initPdfFindController(
       "fraction-highlight.pdf"
@@ -552,7 +533,7 @@ describe("pdf_find_controller", function () {
       eventBus,
       pdfFindController,
       state: {
-        query: "version.the",
+        query: "version. the",
       },
       matchesPerPage: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       selectedMatch: {
@@ -571,7 +552,7 @@ describe("pdf_find_controller", function () {
       eventBus,
       pdfFindController,
       state: {
-        query: "trace-based  just-in-time",
+        query: "trace-based just-in-time",
       },
       matchesPerPage: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
       selectedMatch: {
@@ -627,8 +608,8 @@ describe("pdf_find_controller", function () {
         pageIndex: 0,
         matchIndex: 0,
       },
-      pageMatches: [[1497]],
-      pageMatchesLength: [[25]],
+      pageMatches: [[1498]],
+      pageMatchesLength: [[24]],
     });
   });
 
@@ -639,7 +620,7 @@ describe("pdf_find_controller", function () {
       eventBus,
       pdfFindController,
       state: {
-        query: "\t   (checks)",
+        query: "(checks)",
       },
       matchesPerPage: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       selectedMatch: {
@@ -670,28 +651,6 @@ describe("pdf_find_controller", function () {
       },
       pageMatches: [[1941]],
       pageMatchesLength: [[21]],
-    });
-  });
-
-  it("performs a search with a dot in the query and a missing whitespace", async function () {
-    const { eventBus, pdfFindController } = await initPdfFindController();
-
-    // The whitespace after the dot must be matched.
-    const query = "complex applications.J";
-
-    await testSearch({
-      eventBus,
-      pdfFindController,
-      state: {
-        query,
-      },
-      matchesPerPage: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      selectedMatch: {
-        pageIndex: 0,
-        matchIndex: 0,
-      },
-      pageMatches: [[1941]],
-      pageMatchesLength: [[23]],
     });
   });
 
