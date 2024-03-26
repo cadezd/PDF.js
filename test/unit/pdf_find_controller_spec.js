@@ -620,7 +620,7 @@ describe("pdf_find_controller", function () {
       eventBus,
       pdfFindController,
       state: {
-        query: "(checks)",
+        query: " (checks)",
       },
       matchesPerPage: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       selectedMatch: {
