@@ -18,7 +18,9 @@
 /** @typedef {import("./interfaces").IPDFLinkService} IPDFLinkService */
 
 import { PromiseCapability } from "pdfjs-lib";
+// eslint-disable-next-line sort-imports
 import { getCharacterType, getNormalizeWithNFKC } from "./pdf_find_utils.js";
+// eslint-disable-next-line sort-imports
 import { binarySearchFirstItem, scrollIntoView } from "./ui_utils.js";
 
 const FindState = {
@@ -47,71 +49,7 @@ const CHARACTERS_TO_NORMALIZE = {
   "\u00BE": "3/4", // Vulgar fraction three quarters
 };
 
-// These diacritics aren't considered as combining diacritics
-// when searching in a document:
-//   https://searchfox.org/mozilla-central/source/intl/unicharutil/util/is_combining_diacritic.py.
-// The combining class definitions can be found:
-//   https://www.unicode.org/reports/tr44/#Canonical_Combining_Class_Values
-// Category 0 corresponds to [^\p{Mn}].
-const DIACRITICS_EXCEPTION = new Set([
-  // UNICODE_COMBINING_CLASS_KANA_VOICING
-  // https://www.compart.com/fr/unicode/combining/8
-  0x3099,
-  0x309a, // UNICODE_COMBINING_CLASS_VIRAMA (under 0xFFFF)
-  // https://www.compart.com/fr/unicode/combining/9
-  0x094d,
-  0x09cd,
-  0x0a4d,
-  0x0acd,
-  0x0b4d,
-  0x0bcd,
-  0x0c4d,
-  0x0ccd,
-  0x0d3b,
-  0x0d3c,
-  0x0d4d,
-  0x0dca,
-  0x0e3a,
-  0x0eba,
-  0x0f84,
-  0x1039,
-  0x103a,
-  0x1714,
-  0x1734,
-  0x17d2,
-  0x1a60,
-  0x1b44,
-  0x1baa,
-  0x1bab,
-  0x1bf2,
-  0x1bf3,
-  0x2d7f,
-  0xa806,
-  0xa82c,
-  0xa8c4,
-  0xa953,
-  0xa9c0,
-  0xaaf6,
-  0xabed, // 91
-  // https://www.compart.com/fr/unicode/combining/91
-  0x0c56, // 129
-  // https://www.compart.com/fr/unicode/combining/129
-  0x0f71, // 130
-  // https://www.compart.com/fr/unicode/combining/130
-  0x0f72,
-  0x0f7a,
-  0x0f7b,
-  0x0f7c,
-  0x0f7d,
-  0x0f80, // 132
-  // https://www.compart.com/fr/unicode/combining/132
-  0x0f74,
-]);
-let DIACRITICS_EXCEPTION_STR; // Lazily initialized, see below.
-
 const DIACRITICS_REG_EXP = /\p{M}+/gu;
-const SPECIAL_CHARS_REG_EXP =
-  /([.*+?^${}()|[\]\\])|(\p{P})|(\s+)|(\p{M})|(\p{L})/gu;
 const REG_EXP_METACHARS = /[.*+?^${}()|[\]\\]/g;
 const NOT_DIACRITIC_FROM_END_REG_EXP = /([^\p{M}])\p{M}*$/u;
 const NOT_DIACRITIC_FROM_START_REG_EXP = /^\p{M}*([^\p{M}])/u;
@@ -752,13 +690,13 @@ class PDFFindController {
       // Words are sorted in reverse order to be sure that "foobar" is matched
       // before "foo" in case the query is "foobar foo".
       query = query.sort().reverse().join("|");
+    } else {
+      // Escape all regex metacharacters if regex is not set
+      query = regex ? query : query.replaceAll(REG_EXP_METACHARS, "\\$&");
     }
 
     // Flags for global, unicode, and case-sensitive matching
     const flags = `gu${caseSensitive ? "" : "i"}`;
-    // Escape all regex metacharacters if regex is not set
-    query = regex ? query : query.replaceAll(REG_EXP_METACHARS, "\\$&");
-
     query = query ? new RegExp(query, flags) : null;
     this.#calculateRegExpMatch(query, entireWord, pageIndex, pageContent);
 
